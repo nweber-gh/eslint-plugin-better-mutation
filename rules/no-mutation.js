@@ -147,6 +147,13 @@ const create = function (context) {
       });
     },
     UpdateExpression(node) {
+      if (
+        isScopedLetVariableAssignment(node.argument) ||
+        isScopedVariable(node.argument, node.argument.parent, allowFunctionProps)
+      ) {
+        return;
+      }
+
       context.report({
         node,
         message: `Unallowed use of \`${node.operator}\` operator`

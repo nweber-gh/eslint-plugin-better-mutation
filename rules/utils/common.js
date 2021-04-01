@@ -1,6 +1,9 @@
 const _ = require('lodash/fp');
 const debug = require('debug')('eslint-better-mutation');
 
+// TypeScript AST
+const TS_AS_EXPRESSION = 'TSAsExpression';
+
 const isReference = _.flow(
   _.property('type'),
   _.includes(_, ['MemberExpression', 'Identifier'])
@@ -36,10 +39,22 @@ const isClassOrFunctionDeclaration = _.flow(
   _.includes(_, ['ClassDeclaration', 'FunctionDeclaration'])
 );
 
+const isEndOfVariableScope = _.flow(
+  _.property('type'),
+  _.includes(_, ['Program', 'FunctionDeclaration', 'ClassDeclaration'])
+);
+
 const isEndOfBlock = _.flow(
   _.property('type'),
   _.includes(_, ['Program', 'FunctionDeclaration', 'ClassDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'])
 );
+
+function getIdentifier(node) {
+  const namePath = _.get('type')(node) === TS_AS_EXPRESSION
+    ? 'expression.name'
+    : 'name';
+  return _.get(namePath)(node);
+}
 
 function getBlockAncestor(node) {
   if (isEndOfBlock(node)) {
@@ -96,14 +111,31 @@ function getLeftMostObject(arg) {
   return getLeftMostObject(object);
 }
 
+function getDeclaration(identifier, node) {
+  // console.log('foo:', identifier);
+  const declarations = _.get('declarations', node) || [];
+  return declarations.find(n => {
+    if (_.get('id.type', n) === 'ObjectPattern') {
+      const destructuredProperties = _.get('properties', _.get('id', n)) || [];
+      return destructuredProperties
+        .filter(p => _.get('type', p) !== 'ExperimentalRestProperty')
+        .find(p => _.get('value.name', p) === identifier);
+    }
+    else {
+      return _.get('id.name', n) === identifier;
+    }
+  });
+}
+
 function isVariableDeclaration(identifier) {
-  return function (node) { // Todo not sure about this defaulting. seems to fix weird bug
-    // todo support multiple declarations
-    const finalNode = node || {};
-    const declaration = _.get('declarations[0]', finalNode);
-    return finalNode.type === 'VariableDeclaration' &&
-      _.isMatch({type: 'VariableDeclarator', id: {name: identifier}}, declaration) &&
-      isValidInit(_.get('init', declaration), finalNode);
+  return function (node = {}) { // Todo not sure about this defaulting. seems to fix weird bug
+    if (_.get('type', node) !== 'VariableDeclaration') {
+      return;
+    }
+
+    const declaration = getDeclaration(identifier, node);
+    const validInitCheck = isValidInit(_.get('init', declaration), node);
+    return !!declaration && validInitCheck;
   };
 }
 
@@ -117,12 +149,26 @@ function isIdentifierDeclared(identifier, idNode) {
 }
 
 function isLetDeclaration(identifier) {
-  return function (node) { // Todo not sure about this defaulting. seems to fix weird bug
-    // todo support multiple declarations
-    const finalNode = node || {};
-    const declaration = _.get('declarations[0]', finalNode);
-    debug('%j', {f: 'isLetDeclaration', declaration, nodeType: finalNode?.type, nodeKind: finalNode?.kind, idNode: declaration?.id, idNodeProps: declaration?.id?.properties});
-    return finalNode.type === 'VariableDeclaration' && _.isMatch({type: 'VariableDeclarator'}, declaration) && isIdentifierDeclared(identifier, declaration?.id) && finalNode.kind === 'let';
+  return function (node = {}) { // Todo not sure about this defaulting. seems to fix weird bug
+    if (_.get('kind', node) !== 'let' || _.get('type', node) !== 'VariableDeclaration') {
+      return;
+    }
+
+    // debug('%j', {f: 'isLetDeclaration', declaration, nodeType: node?.type, nodeKind: node?.kind, idNode: declaration?.id, idNodeProps: declaration?.id?.properties});
+
+    const declaration = getDeclaration(identifier, node);
+
+    // if from a destructure verify the source as well
+    if (declaration && _.get('id.type', declaration) === 'ObjectPattern') {
+      const validInitCheck = isValidInit(_.get('init', declaration), node);
+      return !!declaration && validInitCheck;
+    }
+
+    return (
+      !!declaration &&
+      _.isMatch({type: 'VariableDeclarator'}, declaration) &&
+      isIdentifierDeclared(identifier, _.get('id', declaration))
+    );
   };
 }
 
@@ -134,7 +180,7 @@ function isScopedVariableIdentifier(identifier, node, allowFunctionProps) {
   return _.some(isVariableDeclaration(identifier))(node.body) ||
     (allowFunctionProps && isScopedFunctionIdentifier(identifier, node)) ||
     isForStatementVariable(identifier, node) ||
-    (!isEndOfBlock(node) && isScopedVariableIdentifier(identifier, node.parent));
+    (!isEndOfVariableScope(node) && isScopedVariableIdentifier(identifier, node.parent));
 }
 
 function isScopedLetIdentifier(identifier, node) {
@@ -145,24 +191,28 @@ function isScopedLetIdentifier(identifier, node) {
   // debug('%j', {f: 'isScopedLetIdentifier', identifier, nodeBody: node.body});
 
   return _.some(isLetDeclaration(identifier))(node.body) ||
-    (!isEndOfBlock(node) && isScopedLetIdentifier(identifier, node.parent));
+    (!isEndOfVariableScope(node) && isScopedLetIdentifier(identifier, node.parent));
 }
 
 function isScopedLetVariableAssignment(node) {
-  if (_.get('operator', node) !== '=') {
+  const identifier = getIdentifier(getLeftMostObject(node.left));
+  if (!identifier) {
     return false;
   }
 
   // debug('%j', {f: 'isScopedLetVariableAssignment', left: node.left});
 
-  const identifier = _.get('name')(getLeftMostObject(node.left));
   return isScopedLetIdentifier(identifier, node.parent);
 }
 
 function isScopedVariable(arg, node, allowFunctionProps) {
   // debug('%j', {f: 'isScopedVariable', arg});
 
-  const identifier = _.get('name')(getLeftMostObject(arg));
+  const identifier = getIdentifier(getLeftMostObject(arg));
+  if (!identifier) {
+    return false;
+  }
+
   return isScopedVariableIdentifier(identifier, node, allowFunctionProps);
 }
 
@@ -178,7 +228,7 @@ function isScopedFunctionIdentifier(identifier, node) {
 }
 
 function isScopedFunction(arg, node) {
-  const identifier = _.get('name')(getLeftMostObject(arg));
+  const identifier = getIdentifier(getLeftMostObject(arg));
   return isScopedFunctionIdentifier(identifier, node);
 }
 

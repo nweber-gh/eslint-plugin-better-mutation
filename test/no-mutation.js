@@ -43,6 +43,99 @@ ruleTester.run('no-mutation', rule, {
     '[1,2,3].reduce((acc, x) => { acc += x; return acc; }, 0)',
     'let array = [1,2,3]; array.reduce((acc, x) => { acc[2] = 1 });',
     // 'let b = c(); b = 1;', // fix isValidInit by looking at called function's return value
+    'let a, b; b = 2;',
+    `
+    function foo() {
+      let a = 2;
+      [1, 2].forEach(function(x) {
+        a = a + x;
+      });
+      return a;
+    }
+    `,
+    `
+    function foo() {
+      let a = 2;
+      [1, 2].forEach(x => {
+        a = a + x;
+      });
+      return a;
+    }
+    `,
+    `
+    function doFoo() {
+      let a = 0;
+      for (let i = 0; i < 5; i = i + 1) {
+        a += i;
+      }
+      return a;
+    }
+    `,
+    `
+    function doFoo() {
+      let a = 0;
+      for (let y = 0; y < 5; y++) {
+        a += y;
+      }
+      return a;
+    }
+    `,
+    `
+    function doFoo() {
+      let a = 0;
+      for (let x = 0; x < 5; x += 1) {
+        a += x;
+      }
+      return a;
+    }
+    `,
+    `
+    function doBaz() {
+      const foo = { a: 1 };
+    
+      let { a } = foo;
+      a = 4;
+    
+      return a;
+    }
+    `,
+    `
+    function doBaz() {
+      const foo = { c: { foo: 1 } };
+  
+      let { c } = foo;
+      c.foo = 2;
+  
+      return c;
+    }
+    `,
+    // TODO - add typescript support to test this
+    // `
+    // export type Foo = {
+    //   a: number;
+    // };
+    
+    // export type Bar = {
+    //   a: number;
+    //   b: number;
+    // };
+    
+    // function isBar(x: unknown): x is Bar {
+    //   return !!x;
+    // }
+    
+    // export function doStuff(o: Foo): Foo {
+    //   let x = {
+    //     ...o,
+    //   };
+    
+    //   if (isBar(x)) {
+    //     (x as Bar).b = 2;
+    //   }
+    
+    //   return x;
+    // }    
+    // `,
     {
       code: 'exports = {};',
       options: [{commonjs: true}]
@@ -145,6 +238,72 @@ ruleTester.run('no-mutation', rule, {
     }
   ],
   invalid: [
+    {
+      code: `
+        function doFoo(i) {
+          let a = 0;
+          for (i; i < 5; i = i + 1) {
+            a += i;
+          }
+          return a;
+        }
+      `,
+      errors: [reassignmentError]
+    },
+    {
+      code: `
+        function doFoo(y) {
+          let a = 0;
+          for (y; y < 5; y++) {
+            a += y;
+          }
+          return a;
+        }
+      `,
+      errors: [incrementError]
+    },
+    {
+      code: `
+        function doFoo(x) {
+          let a = 0;
+          for (x; x < 5; x += 1) {
+            a += x;
+          }
+          return a;
+        }
+      `,
+      errors: [reassignmentError]
+    },
+    {
+      code: `
+        function doMutation(a) {
+          [1, 2].forEach(function(x) {
+            a = a + x;
+          });
+          return a;
+        }
+        function foo() {
+          let a = 2;
+          doMutation(a);
+        }
+      `,
+      errors: [reassignmentError]
+    },
+    {
+      code: `
+        function doMutation(a) {
+          [1, 2].forEach(x => {
+            a = a + x;
+          });
+          return a;
+        }
+        function foo() {
+          let a = 2;
+          doMutation(a);
+        }
+      `,
+      errors: [reassignmentError]
+    },
     {
       code: 'class Clazz {}; Clazz.staticFoo = 3',
       errors: [reassignmentError]

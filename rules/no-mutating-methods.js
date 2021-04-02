@@ -43,6 +43,16 @@ const create = function (context) {
         return;
       }
 
+      // special handling if the allowedObject is in `this`
+      // e.g., `this.history.push` vs `history.push`
+      if (
+        !!node.callee.object.property &&
+        node.callee.object.property.type === 'Identifier' &&
+        allowedObjects.includes(node.callee.object.property.name)
+      ) {
+        return;
+      }
+
       const name = getNameIfPropertyIsIdentifier(node.callee.property) || getNameIfPropertyIsLiteral(node.callee.property);
       if (name && !isScopedVariable(node.callee.object, node.parent) && !isObjectExpression(node.callee.object) && !isExemptedReducer(exemptedReducerCallees, node.parent)) {
         context.report({

@@ -144,7 +144,7 @@ function isScopedVariableIdentifier(identifier, node, allowFunctionProps) {
   return _.some(isVariableDeclaration(identifier))(node.body) ||
     (allowFunctionProps && isScopedFunctionIdentifier(identifier, node)) ||
     isForStatementVariable(identifier, node) ||
-    (!isEndOfBlock(node) && isScopedVariableIdentifier(identifier, node.parent));
+    (!isEndOfVariableScope(node) && isScopedVariableIdentifier(identifier, node.parent));
 }
 
 function isScopedLetIdentifier(identifier, node) {

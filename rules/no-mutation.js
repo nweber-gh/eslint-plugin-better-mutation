@@ -125,12 +125,33 @@ const create = function (context) {
       const isCommonJs = isCommonJsExport(node);
       const isPrototypeAss = isPrototypeAssignment(node);
 
-      if ((isCommonJs && acceptCommonJs) ||
-        (isPrototypeAss && acceptPrototypes) ||
-        isExemptedIdentifier(exemptedIdentifiers, node.left) ||
-        isScopedLetVariableAssignment(node) ||
-        isScopedVariable(node.left, node.parent, allowFunctionProps) ||
-        isExemptedReducer(exemptedReducerCallees, node.parent)) {
+      // console.log('no mutation rule check');
+
+      const commonJSCheck = (isCommonJs && acceptCommonJs);
+      const prototypeCheck = (isPrototypeAss && acceptPrototypes);
+      const exemptedIdentifierCheck = isExemptedIdentifier(exemptedIdentifiers, node.left);
+      const scopedLetVariableAssignmentCheck = isScopedLetVariableAssignment(node);
+      const scopedVariableCheck = isScopedVariable(node.left, node.parent, allowFunctionProps);
+      const exemptedReducerCheck = isExemptedReducer(exemptedReducerCallees, node.parent);
+
+      // console.log('commonJSCheck:', commonJSCheck);
+      // console.log('prototypeCheck:', prototypeCheck);
+      // console.log('exemptedIdentifierCheck:', exemptedIdentifierCheck);
+      // console.log('scopedLetVariableAssignmentCheck:', scopedLetVariableAssignmentCheck);
+      // console.log('scopedVariableCheck:', scopedVariableCheck);
+      // console.log('exemptedReducerCheck:', exemptedReducerCheck);
+      // console.log(node);
+
+      if (
+        commonJSCheck ||
+        prototypeCheck ||
+        exemptedIdentifierCheck ||
+        scopedLetVariableAssignmentCheck ||
+        scopedVariableCheck ||
+        exemptedReducerCheck
+      ) {
+        // console.log('allowed!')
+        // console.log('---------------------------------------------------------------------------------');
         return;
       }
 
@@ -140,6 +161,9 @@ const create = function (context) {
       } else if (isPrototypeAss) {
         errorType = ERROR_TYPES.PROTOTYPE;
       }
+
+      // console.log('failed!')
+      // console.log('---------------------------------------------------------------------------------');
 
       context.report({
         node,

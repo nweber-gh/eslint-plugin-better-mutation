@@ -121,7 +121,6 @@ function isVariableDeclaration(identifier) {
   };
 }
 
-
 function isLetDeclaration(identifier) {
   return function (node) { // Todo not sure about this defaulting. seems to fix weird bug
     const finalNode = node || {};

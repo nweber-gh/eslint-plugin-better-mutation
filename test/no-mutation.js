@@ -60,6 +60,33 @@ ruleTester.run('no-mutation', rule, {
       return a;
     }
     `,
+    `
+    function doFoo() {
+      let a = 0;
+      for (let i = 0; i < 5; i = i + 1) {
+        a += i;
+      }
+      return a;
+    }
+    `,
+    `
+    function doFoo() {
+      let a = 0;
+      for (let y = 0; y < 5; y++) {
+        a += y;
+      }
+      return a;
+    }
+    `,
+    `
+    function doFoo() {
+      let a = 0;
+      for (let x = 0; x < 5; x += 1) {
+        a += x;
+      }
+      return a;
+    }
+    `,
     // TODO - add typescript support to test this
     // `
     // export type Foo = {
@@ -189,6 +216,42 @@ ruleTester.run('no-mutation', rule, {
     }
   ],
   invalid: [
+    {
+      code: `
+        function doFoo(i) {
+          let a = 0;
+          for (i; i < 5; i = i + 1) {
+            a += i;
+          }
+          return a;
+        }
+      `,
+      errors: [reassignmentError]
+    },
+    {
+      code: `
+        function doFoo(y) {
+          let a = 0;
+          for (y; y < 5; y++) {
+            a += y;
+          }
+          return a;
+        }
+      `,
+      errors: [incrementError]
+    },
+    {
+      code: `
+        function doFoo(x) {
+          let a = 0;
+          for (x; x < 5; x += 1) {
+            a += x;
+          }
+          return a;
+        }
+      `,
+      errors: [reassignmentError]
+    },
     {
       code: `
         function doMutation(a) {

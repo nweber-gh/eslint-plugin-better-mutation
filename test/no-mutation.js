@@ -87,6 +87,36 @@ ruleTester.run('no-mutation', rule, {
       return a;
     }
     `,
+    `
+    function doBaz() {
+      const foo = { a: 1 };
+    
+      let { a } = foo;
+      a = 4;
+    
+      return a;
+    }
+    `,
+    `
+    function doBaz() {
+      const foo = { b: ['hello'] };
+    
+      let { b } = foo;
+      b.push('foo');
+  
+      return b;
+    }
+    `,
+    `
+    function doBaz() {
+      const foo = { c: { foo: 1 } };
+  
+      let { c } = foo;
+      c.foo = 2;
+  
+      return c;
+    }
+    `,
     // TODO - add typescript support to test this
     // `
     // export type Foo = {

@@ -122,16 +122,23 @@ function isVariableDeclaration(identifier) {
 }
 
 function isLetDeclaration(identifier) {
-  return function (node) { // Todo not sure about this defaulting. seems to fix weird bug
-    const finalNode = node || {};
-    const declarations = _.get('declarations', finalNode) || [];
-    const declaration = declarations.find(n => n.id.name === identifier);
-    return (
-      declaration &&
-      finalNode.type === 'VariableDeclaration' &&
-      _.isMatch({type: 'VariableDeclarator', id: {name: identifier}}, declaration) &&
-      finalNode.kind === 'let'
-    );
+  return function (node = {}) { // Todo not sure about this defaulting. seems to fix weird bug
+    if (node.kind !== 'let' || node.type !== 'VariableDeclaration') {
+      return;
+    }
+
+    const declarations = _.get('declarations', node) || [];
+    const declaration = declarations.find(n => {
+      if (n.id.type === 'ObjectPattern') {
+        const destructuredProperties = _.get('properties', n.id) || [];
+        return destructuredProperties.find(p => p.key.name === identifier);
+      }
+      else {
+        return n.id.name === identifier;
+      }
+    });
+
+    return !!declaration;
   };
 }
 
@@ -156,6 +163,7 @@ function isScopedLetIdentifier(identifier, node) {
 
 function isScopedLetVariableAssignment(node) {
   const identifier = getIdentifier(getLeftMostObject(node.left));
+  console.log('is scoped let:', identifier);
   return isScopedLetIdentifier(identifier, node.parent);
 }
 

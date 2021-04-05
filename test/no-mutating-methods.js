@@ -52,7 +52,17 @@ ruleTester.run('no-mutating-methods', rule, {
     'var value = []; value.copyWithin(a);',
     'let array = [1,2,3]; reduce((acc, x) => { acc.push(1); return acc; }, array);',
     'let array = [1,2,3]; array.reduce((acc, x) => { acc.push(1); return acc; });',
-    'let array = [1,2,3]; array.reduce((acc, x) => { if (x==1) { acc.push(1); } return acc; });'
+    'let array = [1,2,3]; array.reduce((acc, x) => { if (x==1) { acc.push(1); } return acc; });',
+    `
+    function doBaz() {
+      const foo = { b: ['hello'] };
+    
+      let { b } = foo;
+      b.push('foo');
+  
+      return b;
+    }
+    `,
   ],
   invalid: [
     {

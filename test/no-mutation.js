@@ -99,16 +99,6 @@ ruleTester.run('no-mutation', rule, {
     `,
     `
     function doBaz() {
-      const foo = { b: ['hello'] };
-    
-      let { b } = foo;
-      b.push('foo');
-  
-      return b;
-    }
-    `,
-    `
-    function doBaz() {
       const foo = { c: { foo: 1 } };
   
       let { c } = foo;

@@ -110,14 +110,28 @@ function getLeftMostObject(arg) {
   return getLeftMostObject(object);
 }
 
+function getDeclaration(identifier, node) {
+  const declarations = _.get('declarations', node) || [];
+  return declarations.find(n => {
+    if (n.id.type === 'ObjectPattern') {
+      const destructuredProperties = _.get('properties', n.id) || [];
+      return destructuredProperties.find(p => p.key.name === identifier);
+    }
+    else {
+      return n.id.name === identifier;
+    }
+  });
+}
+
 function isVariableDeclaration(identifier) {
-  return function (node) { // Todo not sure about this defaulting. seems to fix weird bug
-    // todo support multiple declarations
-    const finalNode = node || {};
-    const declaration = _.get('declarations[0]', finalNode);
-    return finalNode.type === 'VariableDeclaration' &&
-      _.isMatch({type: 'VariableDeclarator', id: {name: identifier}}, declaration) &&
-      isValidInit(_.get('init', declaration), finalNode);
+  return function (node = {}) { // Todo not sure about this defaulting. seems to fix weird bug
+    if (node.type !== 'VariableDeclaration') {
+      return;
+    }
+
+    const declaration = getDeclaration(identifier, node);
+    const validInitCheck = isValidInit(_.get('init', declaration), node);
+    return !!declaration && validInitCheck;
   };
 }
 
@@ -127,16 +141,13 @@ function isLetDeclaration(identifier) {
       return;
     }
 
-    const declarations = _.get('declarations', node) || [];
-    const declaration = declarations.find(n => {
-      if (n.id.type === 'ObjectPattern') {
-        const destructuredProperties = _.get('properties', n.id) || [];
-        return destructuredProperties.find(p => p.key.name === identifier);
-      }
-      else {
-        return n.id.name === identifier;
-      }
-    });
+    const declaration = getDeclaration(identifier, node);
+
+    // if from a destructure verify the source as well
+    if (declaration && declaration.id.type === 'ObjectPattern') {
+      const validInitCheck = isValidInit(_.get('init', declaration), node);
+      return !!declaration && validInitCheck;
+    }
 
     return !!declaration;
   };
@@ -157,13 +168,15 @@ function isScopedLetIdentifier(identifier, node) {
   if (_.isNil(node)) {
     return false;
   }
-  return _.some(isLetDeclaration(identifier))(node.body) ||
-    (!isEndOfVariableScope(node) && isScopedLetIdentifier(identifier, node.parent));
+
+  const anyLetCheck = _.some(isLetDeclaration(identifier))(node.body);
+  const scopeCheck = (!isEndOfVariableScope(node) && isScopedLetIdentifier(identifier, node.parent));
+
+  return anyLetCheck || scopeCheck;
 }
 
 function isScopedLetVariableAssignment(node) {
   const identifier = getIdentifier(getLeftMostObject(node.left));
-  console.log('is scoped let:', identifier);
   return isScopedLetIdentifier(identifier, node.parent);
 }
 

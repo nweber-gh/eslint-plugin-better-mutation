@@ -125,7 +125,7 @@ const create = function (context) {
       const isCommonJs = isCommonJsExport(node);
       const isPrototypeAss = isPrototypeAssignment(node);
 
-      console.log('no mutation rule check');
+      // console.log('no mutation rule check');
 
       const commonJSCheck = (isCommonJs && acceptCommonJs);
       const prototypeCheck = (isPrototypeAss && acceptPrototypes);

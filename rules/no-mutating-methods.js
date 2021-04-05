@@ -54,7 +54,12 @@ const create = function (context) {
       }
 
       const name = getNameIfPropertyIsIdentifier(node.callee.property) || getNameIfPropertyIsLiteral(node.callee.property);
-      if (name && !isScopedVariable(node.callee.object, node.parent) && !isObjectExpression(node.callee.object) && !isExemptedReducer(exemptedReducerCallees, node.parent)) {
+      const hasName = !!name;
+      const scopedVariableCheck = !isScopedVariable(node.callee.object, node.parent)
+      const expressionCheck = !isObjectExpression(node.callee.object)
+      const exemptedCheck = !isExemptedReducer(exemptedReducerCallees, node.parent);
+
+      if (hasName && scopedVariableCheck && expressionCheck &&exemptedCheck) {
         context.report({
           node,
           message: `The use of method \`${name}\` is not allowed as it might be a mutating method`

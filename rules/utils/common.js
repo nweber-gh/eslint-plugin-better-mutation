@@ -155,9 +155,6 @@ function isScopedLetIdentifier(identifier, node) {
 }
 
 function isScopedLetVariableAssignment(node) {
-  if (_.get('operator', node) !== '=') {
-    return false;
-  }
   const identifier = getIdentifier(getLeftMostObject(node.left));
   return isScopedLetIdentifier(identifier, node.parent);
 }

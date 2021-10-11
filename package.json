@@ -48,7 +48,7 @@
     "lodash": "~4.17.20"
   },
   "devDependencies": {
-    "@ava/babel": "^1.0.1",
+    "@ava/babel": "^2.0.0",
     "ava": "~3.14.0",
     "eslint": "~7.15.0",
     "eslint-ava-rule-tester": "~4.0.0",

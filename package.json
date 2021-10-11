@@ -57,7 +57,7 @@
     "pify": "~5.0.0",
     "rimraf": "~3.0.2",
     "tap-xunit": "~2.4.1",
-    "xo": "~0.35.0"
+    "xo": "~0.45.0"
   },
   "peerDependencies": {
     "eslint": ">=6"

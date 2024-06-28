@@ -131,7 +131,9 @@ function getDeclaration(identifier, node) {
   return declarations.find((n) => {
     if (n.id.type === 'ObjectPattern') {
       const destructuredProperties = _.get('properties', n.id) || [];
-      return destructuredProperties.find((p) => p.key.name === identifier);
+      return destructuredProperties.find(
+        (p) => _.get('name', p.key) === identifier
+      );
     }
 
     return n.id.name === identifier;
@@ -139,9 +141,8 @@ function getDeclaration(identifier, node) {
 }
 
 function isVariableDeclaration(identifier) {
-  return function (node = {}) {
-    // Todo not sure about this defaulting. seems to fix weird bug
-    if (node.type !== 'VariableDeclaration') {
+  return function (node) {
+    if (_.isNil(node) || node.type !== 'VariableDeclaration') {
       return;
     }
 
@@ -152,9 +153,12 @@ function isVariableDeclaration(identifier) {
 }
 
 function isLetDeclaration(identifier) {
-  return function (node = {}) {
-    // Todo not sure about this defaulting. seems to fix weird bug
-    if (node.kind !== 'let' || node.type !== 'VariableDeclaration') {
+  return function (node) {
+    if (
+      _.isNil(node) ||
+      node.kind !== 'let' ||
+      node.type !== 'VariableDeclaration'
+    ) {
       return;
     }
 
@@ -171,7 +175,7 @@ function isLetDeclaration(identifier) {
 }
 
 function isScopedVariableIdentifier(identifier, node, allowFunctionProps) {
-  if (_.isNil(node)) {
+  if (_.isNil(node) || _.isNil(identifier)) {
     return false;
   }
 

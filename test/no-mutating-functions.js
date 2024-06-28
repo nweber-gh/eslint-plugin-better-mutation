@@ -11,9 +11,11 @@ const ruleTester = avaRuleTester(test, {
   },
 });
 
-const error = {
-  message: 'Unallowed use of mutating functions',
-};
+function getError(mutatingFunction) {
+  return {
+    message: `Unallowed use of mutating function '${mutatingFunction}'`,
+  };
+}
 
 ruleTester.run('no-mutating-functions', rule, {
   valid: [
@@ -52,7 +54,7 @@ ruleTester.run('no-mutating-functions', rule, {
   invalid: [
     {
       code: 'Object.assign();',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'assign();',
@@ -61,7 +63,7 @@ ruleTester.run('no-mutating-functions', rule, {
           useLodashFunctionImports: true,
         },
       ],
-      errors: [error],
+      errors: [getError('assign')],
     },
     {
       code: 'Object.assign();',
@@ -70,74 +72,74 @@ ruleTester.run('no-mutating-functions', rule, {
           ignoredMethods: ['Object.assign'],
         },
       ],
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: '_.defaults(a);',
-      errors: [error],
+      errors: [getError('_.defaults')],
     },
     {
       code: '_.assign(a, b);',
-      errors: [error],
+      errors: [getError('_.assign')],
     },
     {
       code: 'Object.assign(a);',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'Object.assign(a, b);',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'Object.assign(a, b, c, d, e);',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'var fn = () => {}; Object.assign(fn, b);',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'function fn() {}; Object.assign(fn, b);',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'var a; Object.assign(a, b);',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'function fn(b) { var a = b; Object.assign(a, c); }',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'function fn(b) { var a = b.foo; Object.assign(a, c); }',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'var a = {foo: 1, bar: 2}; function fn() { Object.assign(a, b); }',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code:
         'function fn(b) { var a = x === 1 ? b : { foo: 1 }; Object.assign(a, c); }',
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
     {
       code: 'Object.defineProperties(a)',
-      errors: [error],
+      errors: [getError('Object.defineProperties')],
     },
     {
       code: 'Object.defineProperty(a)',
-      errors: [error],
+      errors: [getError('Object.defineProperty')],
     },
     {
       code: 'Object.setPrototypeOf(a)',
-      errors: [error],
+      errors: [getError('Object.setPrototypeOf')],
     },
     {
       code:
         'let array = [1,2,3]; _.reduce((acc, x) => Object.assign(acc, { [x]: x }), {}, array);',
       options: [{reducers: []}],
-      errors: [error],
+      errors: [getError('Object.assign')],
     },
   ],
 });

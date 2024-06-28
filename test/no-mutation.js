@@ -11,18 +11,15 @@ const ruleTester = avaRuleTester(test, {
   },
 });
 
-const error = (message) => ({
-  message,
+const getReassignmentError = (assignee, messageId = 'reassignmentError') => ({
+  messageId,
+  data: {assignee},
 });
-const reassignmentError = error('Unallowed reassignment');
-const incrementError = error('Unallowed use of `++` operator');
-const decrementError = error('Unallowed use of `--` operator');
-const commonJsError = error(
-  'Unallowed reassignment. You may want to activate the `commonjs` option for this rule'
-);
-const prototypesError = error(
-  'Unallowed reassignment. You may want to activate the `prototypes` option for this rule'
-);
+const getError = (messageId) => ({
+  messageId,
+});
+const incrementError = getError('incrementError');
+const decrementError = getError('decrementError');
 
 ruleTester.run('no-mutation', rule, {
   valid: [
@@ -248,7 +245,7 @@ ruleTester.run('no-mutation', rule, {
           return a;
         }
       `,
-      errors: [reassignmentError],
+      errors: [getReassignmentError('i')],
     },
     {
       code: `
@@ -272,7 +269,7 @@ ruleTester.run('no-mutation', rule, {
           return a;
         }
       `,
-      errors: [reassignmentError],
+      errors: [getReassignmentError('x')],
     },
     {
       code: `
@@ -287,7 +284,7 @@ ruleTester.run('no-mutation', rule, {
           doMutation(a);
         }
       `,
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: `
@@ -302,43 +299,43 @@ ruleTester.run('no-mutation', rule, {
           doMutation(a);
         }
       `,
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: 'class Clazz {}; Clazz.staticFoo = 3',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('Clazz.staticFoo')],
     },
     {
       code: 'function foo() {}; foo.metadata = {}',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('foo.metadata')],
     },
     {
       code: 'function Clazz() { }; Clazz.prototype.foo = function() {}',
-      errors: [prototypesError],
+      errors: [getReassignmentError('Clazz.prototype.foo', 'prototypesError')],
     },
     {
       code: 'a = 2;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: 'a += 2;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: 'a -= 2;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: 'a *= 2;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: 'a /= 2;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: 'a %= 2;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: 'a++;',
@@ -358,108 +355,112 @@ ruleTester.run('no-mutation', rule, {
     },
     {
       code: 'function foo(a) { a = a || {}; }',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: 'module.foo = {};',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('module.foo')],
     },
     {
       code: 'foo.exports = {};',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('foo.exports')],
     },
     {
       code: 'exports = {};',
-      errors: [commonJsError],
+      errors: [getReassignmentError('exports', 'commonJsError')],
     },
     {
       code: 'exports.foo = {};',
-      errors: [commonJsError],
+      errors: [getReassignmentError('exports.foo', 'commonJsError')],
     },
     {
       code: 'exports.foo.bar = {};',
-      errors: [commonJsError],
+      errors: [getReassignmentError('exports.foo.bar', 'commonJsError')],
     },
     {
       code: 'exports[foo] = {};',
-      errors: [commonJsError],
+      errors: [getReassignmentError('exports[foo]', 'commonJsError')],
     },
     {
       code: 'exports.foo[bar] = {};',
-      errors: [commonJsError],
+      errors: [getReassignmentError('exports.foo[bar]', 'commonJsError')],
     },
     {
       code: 'exports[foo].bar = {};',
-      errors: [commonJsError],
+      errors: [getReassignmentError('exports[foo].bar', 'commonJsError')],
     },
     {
       code: 'module.exports = {};',
-      errors: [commonJsError],
+      errors: [getReassignmentError('module.exports', 'commonJsError')],
     },
     {
       code: 'module.exports.foo = {};',
-      errors: [commonJsError],
+      errors: [getReassignmentError('module.exports.foo', 'commonJsError')],
     },
     {
       code: 'module.exports[foo] = {};',
-      errors: [commonJsError],
+      errors: [getReassignmentError('module.exports[foo]', 'commonJsError')],
     },
     {
       code: 'module.exports.foo[bar] = {};',
-      errors: [commonJsError],
+      errors: [
+        getReassignmentError('module.exports.foo[bar]', 'commonJsError'),
+      ],
     },
     {
       code: 'module.exports[foo].bar = {};',
-      errors: [commonJsError],
+      errors: [
+        getReassignmentError('module.exports[foo].bar', 'commonJsError'),
+      ],
     },
     {
       code: 'foo.bar = {};',
       options: [{exceptions: [{object: 'foo', property: 'boo'}]}],
-      errors: [reassignmentError],
+      errors: [getReassignmentError('foo.bar')],
     },
     {
       code: 'baz.propTypes = {};',
       options: [{exceptions: [{object: 'foo'}]}],
-      errors: [reassignmentError],
+      errors: [getReassignmentError('baz.propTypes')],
     },
     {
       code: 'baz.propTypes = {};',
       options: [{exceptions: [{property: 'props'}]}],
-      errors: [reassignmentError],
+      errors: [getReassignmentError('baz.propTypes')],
     },
     {
       code: 'baz.propTypes = {};',
       options: [{exceptions: [{}]}],
-      errors: [reassignmentError],
+      errors: [getReassignmentError('baz.propTypes')],
     },
     {
       code: 'this.foo = 100;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('this.foo')],
     },
     {
       code: 'this.foo.bar = 100;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('this.foo.bar')],
     },
     {
       code: 'function bar() { this.foo = 100; }',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('this.foo')],
     },
     {
       code: 'let a = 1; function bar() { a = 2; }',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a')],
     },
     {
       code: 'a[0] = 2;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('a[0]')],
     },
     {
       code: 'o["name"] = 2;',
-      errors: [reassignmentError],
+      errors: [getReassignmentError('o["name"]')],
     },
     {
       code: '_.reduce((acc, x) => { acc[2] = 1; return acc; }, [], [1,2,3])',
       options: [{reducers: []}],
-      errors: [reassignmentError],
+      errors: [getReassignmentError('acc[2]')],
     },
   ],
 });

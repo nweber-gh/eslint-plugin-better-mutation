@@ -19,10 +19,7 @@
     "test": "nyc ava",
     "test:ci": "nyc --reporter=lcov ava --tap | tap-xunit > reports/test-results.xml"
   },
-  "files": [
-    "index.js",
-    "rules"
-  ],
+  "files": ["index.js", "rules"],
   "keywords": [
     "eslint",
     "plugin",
@@ -64,7 +61,11 @@
   },
   "xo": {
     "esnext": true,
-    "space": 2
+    "space": 2,
+    "prettier": true
+  },
+  "prettier": {
+    "trailingComma": "es5"
   },
   "ava": {
     "babel": true

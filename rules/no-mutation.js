@@ -1,35 +1,41 @@
 'use strict';
 
 const _ = require('lodash/fp');
-const {isScopedVariable, isScopedFunction, isExemptedReducer,isScopedLetVariableAssignment} = require('./utils/common');
+const {
+  isScopedVariable,
+  isScopedFunction,
+  isExemptedReducer,
+  isScopedLetVariableAssignment,
+} = require('./utils/common');
 
 const isModuleExports = _.matches({
   type: 'MemberExpression',
   object: {
     type: 'Identifier',
-    name: 'module'
+    name: 'module',
   },
   property: {
     type: 'Identifier',
-    name: 'exports'
-  }
+    name: 'exports',
+  },
 });
 
 const isExports = _.matches({
-  type: 'Identifier', name: 'exports'
+  type: 'Identifier',
+  name: 'exports',
 });
 
 const isPrototype = _.matches({
   type: 'MemberExpression',
   object: {
     object: {
-      type: 'Identifier'
+      type: 'Identifier',
     },
     property: {
       type: 'Identifier',
-      name: 'prototype'
-    }
-  }
+      name: 'prototype',
+    },
+  },
 });
 
 function isModuleExportsMemberExpression(node) {
@@ -37,31 +43,30 @@ function isModuleExportsMemberExpression(node) {
     isExports,
     isModuleExports,
     function (node) {
-      return node.type === 'MemberExpression' && isModuleExportsMemberExpression(node.object);
-    }
+      return (
+        node.type === 'MemberExpression' &&
+        isModuleExportsMemberExpression(node.object)
+      );
+    },
   ])(node);
 }
 
-const isPrototypeAssignment = node => {
-  return _.flow(
-    _.property('left'),
-    isPrototype
-  )(node) && isScopedFunction(node.left, node.parent);
+const isPrototypeAssignment = (node) => {
+  return (
+    _.flow(_.property('left'), isPrototype)(node) &&
+    isScopedFunction(node.left, node.parent)
+  );
 };
 
 const isCommonJsExport = _.flow(
   _.property('left'),
-  _.overSome([
-    isExports,
-    isModuleExports,
-    isModuleExportsMemberExpression
-  ])
+  _.overSome([isExports, isModuleExports, isModuleExportsMemberExpression])
 );
 
 const ERROR_TYPES = {
   COMMON_JS: 'COMMON_JS',
   PROTOTYPE: 'PROTOTYPE',
-  REGULAR: 'REGULAR'
+  REGULAR: 'REGULAR',
 };
 
 function errorMessage(errorType) {
@@ -69,10 +74,12 @@ function errorMessage(errorType) {
   let extraInfo = '';
   switch (errorType) {
     case ERROR_TYPES.COMMON_JS:
-      extraInfo = '. You may want to activate the `commonjs` option for this rule';
+      extraInfo =
+        '. You may want to activate the `commonjs` option for this rule';
       break;
     case ERROR_TYPES.PROTOTYPE:
-      extraInfo = '. You may want to activate the `prototypes` option for this rule';
+      extraInfo =
+        '. You may want to activate the `prototypes` option for this rule';
       break;
     default:
       break;
@@ -88,11 +95,15 @@ function makeException(exception) {
 
   let query = {type: 'MemberExpression'};
   if (exception.object) {
-    query = _.assign(query, {object: {type: 'Identifier', name: exception.object}});
+    query = _.assign(query, {
+      object: {type: 'Identifier', name: exception.object},
+    });
   }
 
   if (exception.property) {
-    query = _.assign(query, {property: {type: 'Identifier', name: exception.property}});
+    query = _.assign(query, {
+      property: {type: 'Identifier', name: exception.property},
+    });
   }
 
   return _.matches(query);
@@ -103,9 +114,12 @@ function isExemptedIdentifier(exemptedIdentifiers, node) {
     return false;
   }
 
-  const matches = exemptedIdentifiers.some(matcher => matcher(node));
-  return matches ||
-    (node.object.type === 'MemberExpression' && isExemptedIdentifier(exemptedIdentifiers, node.object));
+  const matches = exemptedIdentifiers.some((matcher) => matcher(node));
+  return (
+    matches ||
+    (node.object.type === 'MemberExpression' &&
+      isExemptedIdentifier(exemptedIdentifiers, node.object))
+  );
 }
 
 const create = function (context) {
@@ -115,26 +129,44 @@ const create = function (context) {
   const acceptPrototypes = options.prototypes;
   const exemptedIdentifiers = _.map(makeException, options.exceptions);
   if (options.allowThis) {
-    exemptedIdentifiers.push(_.matches({type: 'MemberExpression', object: {type: 'ThisExpression'}}));
+    exemptedIdentifiers.push(
+      _.matches({type: 'MemberExpression', object: {type: 'ThisExpression'}})
+    );
   }
 
-  const exemptedReducerCallees = _.getOr(['reduce'], ['options', 0, 'reducers'], context);
+  const exemptedReducerCallees = _.getOr(
+    ['reduce'],
+    ['options', 0, 'reducers'],
+    context
+  );
 
   return {
     AssignmentExpression(node) {
       const isCommonJs = isCommonJsExport(node);
       const isPrototypeAss = isPrototypeAssignment(node);
 
-      // console.log('no mutation rule check');
+      // Console.log('no mutation rule check');
 
-      const commonJSCheck = (isCommonJs && acceptCommonJs);
-      const prototypeCheck = (isPrototypeAss && acceptPrototypes);
-      const exemptedIdentifierCheck = isExemptedIdentifier(exemptedIdentifiers, node.left);
-      const scopedLetVariableAssignmentCheck = isScopedLetVariableAssignment(node);
-      const scopedVariableCheck = isScopedVariable(node.left, node.parent, allowFunctionProps);
-      const exemptedReducerCheck = isExemptedReducer(exemptedReducerCallees, node.parent);
+      const commonJSCheck = isCommonJs && acceptCommonJs;
+      const prototypeCheck = isPrototypeAss && acceptPrototypes;
+      const exemptedIdentifierCheck = isExemptedIdentifier(
+        exemptedIdentifiers,
+        node.left
+      );
+      const scopedLetVariableAssignmentCheck = isScopedLetVariableAssignment(
+        node
+      );
+      const scopedVariableCheck = isScopedVariable(
+        node.left,
+        node.parent,
+        allowFunctionProps
+      );
+      const exemptedReducerCheck = isExemptedReducer(
+        exemptedReducerCallees,
+        node.parent
+      );
 
-      // console.log('commonJSCheck:', commonJSCheck);
+      // Console.log('commonJSCheck:', commonJSCheck);
       // console.log('prototypeCheck:', prototypeCheck);
       // console.log('exemptedIdentifierCheck:', exemptedIdentifierCheck);
       // console.log('scopedLetVariableAssignmentCheck:', scopedLetVariableAssignmentCheck);
@@ -150,7 +182,7 @@ const create = function (context) {
         scopedVariableCheck ||
         exemptedReducerCheck
       ) {
-        // console.log('allowed!')
+        // Console.log('allowed!')
         // console.log('---------------------------------------------------------------------------------');
         return;
       }
@@ -162,66 +194,72 @@ const create = function (context) {
         errorType = ERROR_TYPES.PROTOTYPE;
       }
 
-      // console.log('failed!')
+      // Console.log('failed!')
       // console.log('---------------------------------------------------------------------------------');
 
       context.report({
         node,
-        message: errorMessage(errorType)
+        message: errorMessage(errorType),
       });
     },
     UpdateExpression(node) {
       if (
         isScopedLetVariableAssignment(node.argument) ||
-        isScopedVariable(node.argument, node.argument.parent, allowFunctionProps)
+        isScopedVariable(
+          node.argument,
+          node.argument.parent,
+          allowFunctionProps
+        )
       ) {
         return;
       }
 
       context.report({
         node,
-        message: `Unallowed use of \`${node.operator}\` operator`
+        message: `Unallowed use of \`${node.operator}\` operator`,
       });
-    }
+    },
   };
 };
 
-const schema = [{
-  type: 'object',
-  properties: {
-    commonjs: {
-      type: 'boolean'
-    },
-    allowThis: {
-      type: 'boolean'
-    },
-    prototypes: {
-      type: 'boolean'
-    },
-    functionProps: {
-      type: 'boolean'
-    },
-    exceptions: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          object: {
-            type: 'string'
+const schema = [
+  {
+    type: 'object',
+    properties: {
+      commonjs: {
+        type: 'boolean',
+      },
+      allowThis: {
+        type: 'boolean',
+      },
+      prototypes: {
+        type: 'boolean',
+      },
+      functionProps: {
+        type: 'boolean',
+      },
+      exceptions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            object: {
+              type: 'string',
+            },
+            property: {
+              type: 'string',
+            },
           },
-          property: {
-            type: 'string'
-          }
-        }
-      }
+        },
+      },
+      reducers: {
+        type: 'array',
+        items: {type: 'string'},
+        default: ['reduce'],
+      },
     },
-    reducers: {
-      type: 'array',
-      items: {type: 'string'},
-      default: ['reduce']
-    }
-  }
-}];
+  },
+];
 
 module.exports = {
   create,
@@ -229,7 +267,7 @@ module.exports = {
     schema,
     docs: {
       description: 'Forbid the use of mutating operators.',
-      recommended: 'error'
-    }
-  }
+      recommended: 'error',
+    },
+  },
 };

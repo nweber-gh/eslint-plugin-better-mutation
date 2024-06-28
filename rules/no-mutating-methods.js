@@ -1,7 +1,11 @@
 'use strict';
 
 const _ = require('lodash/fp');
-const {isObjectExpression, isScopedVariable, isExemptedReducer} = require('./utils/common');
+const {
+  isObjectExpression,
+  isScopedVariable,
+  isExemptedReducer,
+} = require('./utils/common');
 
 const mutatingMethods = new Set([
   'copyWithin',
@@ -13,25 +17,33 @@ const mutatingMethods = new Set([
   'splice',
   'unshift',
   'unwatch',
-  'watch'
+  'watch',
 ]);
 
 function getNameIfPropertyIsIdentifier(property) {
-  return property.type === 'Identifier' &&
+  return (
+    property.type === 'Identifier' &&
     mutatingMethods.has(property.name) &&
-    property.name;
+    property.name
+  );
 }
 
 function getNameIfPropertyIsLiteral(property) {
-  return property.type === 'Literal' &&
+  return (
+    property.type === 'Literal' &&
     mutatingMethods.has(property.value) &&
-    property.value;
+    property.value
+  );
 }
 
 const create = function (context) {
   const options = context.options[0] || {};
   const allowedObjects = options.allowedObjects || [];
-  const exemptedReducerCallees = _.getOr(['reduce'], ['options', 0, 'reducers'], context);
+  const exemptedReducerCallees = _.getOr(
+    ['reduce'],
+    ['options', 0, 'reducers'],
+    context
+  );
 
   return {
     CallExpression(node) {
@@ -39,52 +51,65 @@ const create = function (context) {
         return;
       }
 
-      if (node.callee.object.type === 'Identifier' && allowedObjects.includes(node.callee.object.name)) {
+      if (
+        node.callee.object.type === 'Identifier' &&
+        allowedObjects.includes(node.callee.object.name)
+      ) {
         return;
       }
 
-      // special handling if the allowedObject is in `this`
+      // Special handling if the allowedObject is in `this`
       // e.g., `this.history.push` vs `history.push`
       if (
-        !!node.callee.object.property &&
+        Boolean(node.callee.object.property) &&
         node.callee.object.property.type === 'Identifier' &&
         allowedObjects.includes(node.callee.object.property.name)
       ) {
         return;
       }
 
-      const name = getNameIfPropertyIsIdentifier(node.callee.property) || getNameIfPropertyIsLiteral(node.callee.property);
-      const hasName = !!name;
-      const scopedVariableCheck = !isScopedVariable(node.callee.object, node.parent)
-      const expressionCheck = !isObjectExpression(node.callee.object)
-      const exemptedCheck = !isExemptedReducer(exemptedReducerCallees, node.parent);
+      const name =
+        getNameIfPropertyIsIdentifier(node.callee.property) ||
+        getNameIfPropertyIsLiteral(node.callee.property);
+      const hasName = Boolean(name);
+      const scopedVariableCheck = !isScopedVariable(
+        node.callee.object,
+        node.parent
+      );
+      const expressionCheck = !isObjectExpression(node.callee.object);
+      const exemptedCheck = !isExemptedReducer(
+        exemptedReducerCallees,
+        node.parent
+      );
 
-      if (hasName && scopedVariableCheck && expressionCheck &&exemptedCheck) {
+      if (hasName && scopedVariableCheck && expressionCheck && exemptedCheck) {
         context.report({
           node,
-          message: `The use of method \`${name}\` is not allowed as it might be a mutating method`
+          message: `The use of method \`${name}\` is not allowed as it might be a mutating method`,
         });
       }
-    }
+    },
   };
 };
 
-const schema = [{
-  type: 'object',
-  properties: {
-    allowedObjects: {
-      type: 'array',
-      items: {
-        type: 'string'
-      }
+const schema = [
+  {
+    type: 'object',
+    properties: {
+      allowedObjects: {
+        type: 'array',
+        items: {
+          type: 'string',
+        },
+      },
+      reducers: {
+        type: 'array',
+        items: {type: 'string'},
+        default: ['reduce'],
+      },
     },
-    reducers: {
-      type: 'array',
-      items: {type: 'string'},
-      default: ['reduce']
-    }
-  }
-}];
+  },
+];
 
 module.exports = {
   create,
@@ -92,7 +117,7 @@ module.exports = {
   meta: {
     docs: {
       description: 'Forbid the use of mutating methods.',
-      recommended: 'error'
-    }
-  }
+      recommended: 'error',
+    },
+  },
 };

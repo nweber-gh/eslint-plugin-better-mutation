@@ -69,23 +69,19 @@ const ERROR_TYPES = {
   REGULAR: 'REGULAR',
 };
 
-function errorMessage(errorType) {
-  const baseMessage = 'Unallowed reassignment';
-  let extraInfo = '';
-  switch (errorType) {
+function getMessageId(error) {
+  switch (error) {
     case ERROR_TYPES.COMMON_JS:
-      extraInfo =
-        '. You may want to activate the `commonjs` option for this rule';
-      break;
+      return 'commonJsError';
     case ERROR_TYPES.PROTOTYPE:
-      extraInfo =
-        '. You may want to activate the `prototypes` option for this rule';
-      break;
+      return 'prototypesError';
+    case '++':
+      return 'incrementError';
+    case '--':
+      return 'decrementError';
     default:
-      break;
+      return 'reassignmentError';
   }
-
-  return baseMessage + extraInfo;
 }
 
 function makeException(exception) {
@@ -130,7 +126,10 @@ const create = function (context) {
   const exemptedIdentifiers = _.map(makeException, options.exceptions);
   if (options.allowThis) {
     exemptedIdentifiers.push(
-      _.matches({type: 'MemberExpression', object: {type: 'ThisExpression'}})
+      _.matches({
+        type: 'MemberExpression',
+        object: {type: 'ThisExpression'},
+      })
     );
   }
 
@@ -199,7 +198,10 @@ const create = function (context) {
 
       context.report({
         node,
-        message: errorMessage(errorType),
+        messageId: getMessageId(errorType),
+        data: {
+          assignee: context.getSourceCode().getText(node.left),
+        },
       });
     },
     UpdateExpression(node) {
@@ -216,7 +218,7 @@ const create = function (context) {
 
       context.report({
         node,
-        message: `Unallowed use of \`${node.operator}\` operator`,
+        messageId: getMessageId(node.operator),
       });
     },
   };
@@ -265,6 +267,15 @@ module.exports = {
   create,
   meta: {
     schema,
+    messages: {
+      reassignmentError: 'Unallowed reassignment to `{{assignee}}`',
+      incrementError: 'Unallowed use of `++` operator',
+      decrementError: 'Unallowed use of `--` operator',
+      commonJsError:
+        'Unallowed reassignment to `{{assignee}}`. You may want to activate the `commonjs` option for this rule',
+      prototypesError:
+        'Unallowed reassignment to `{{assignee}}`. You may want to activate the `prototypes` option for this rule',
+    },
     docs: {
       description: 'Forbid the use of mutating operators.',
       recommended: 'error',

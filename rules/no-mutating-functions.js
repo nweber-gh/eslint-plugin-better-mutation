@@ -38,6 +38,12 @@ const mutatingFunctions = [
 
 const isLodashFn = _.startsWith('_.');
 
+function getMutatingFunction(node) {
+  return node.type === 'MemberExpression'
+    ? `${node.object.name}.${node.property.name}`
+    : node.name;
+}
+
 function buildIsMutatingFunction(ignoredMethods, useLodashFunctionImports) {
   const matchesSpecs = _.flow(
     _.map((fn) =>
@@ -107,7 +113,9 @@ const create = function (context) {
       ) {
         context.report({
           node,
-          message: 'Unallowed use of mutating functions',
+          message: `Unallowed use of mutating function '${getMutatingFunction(
+            node.callee
+          )}'`,
         });
       }
     },
